@@ -8,4 +8,4 @@ Contains bug fixes, etc. Requires _lodash_.
 
 Converted (roughly) to TypeScript, to be included directly into projects.
 
-_This *NOT* an npm module any longer!_
+_This is *NOT* an npm module any longer!_
