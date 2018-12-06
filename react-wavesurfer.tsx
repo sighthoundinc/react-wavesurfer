@@ -1,8 +1,8 @@
 /* tslint:disable:file-header */
 
-import * as React from "react";
-import * as PropTypes from "prop-types";
 import * as _ from "lodash";
+import * as PropTypes from "prop-types";
+import * as React from "react";
 
 const EVENTS = [
     "audioprocess",
@@ -15,7 +15,7 @@ const EVENTS = [
     "ready",
     "scroll",
     "seek",
-    "zoom"
+    "zoom",
 ];
 
 /**
@@ -59,53 +59,72 @@ const WaveSurfer = (window as any).WaveSurfer;
 
 class Wavesurfer extends React.Component<any, any> {
 
-    private _wavesurfer: any;
-    private _handleResize = () => { };
-    private wavesurferEl: any;
-
     public static propTypes: any;
     public static defaultProps: any;
+
+    private wavesurfer: any;
+    private wavesurferEl: any;
 
     constructor(props: any) {
         super(props);
 
         this.state = {
-            isReady: false
+            isReady: false,
         };
 
-        this._wavesurfer = Object.create(WaveSurfer);
-        this._loadMediaElt = this._loadMediaElt.bind(this);
-        this._loadAudio = this._loadAudio.bind(this);
-        this._seekTo = this._seekTo.bind(this);
+        this.wavesurfer = Object.create(WaveSurfer);
+        this.loadMediaElt = this.loadMediaElt.bind(this);
+        this.loadAudio = this.loadAudio.bind(this);
+        this.seekTo = this.seekTo.bind(this);
 
         if (this.props.responsive) {
-            this._handleResize = resizeThrottler(() => {
+            this.handleResize = resizeThrottler(() => {
                 // pause playback for resize operation
                 if (this.props.playing) {
-                    this._wavesurfer.pause();
+                    this.wavesurfer.pause();
                 }
 
                 // resize the waveform
-                this._wavesurfer.drawBuffer();
+                this.wavesurfer.drawBuffer();
 
                 // We allow resize before file isloaded, since we can get wave data from outside,
                 // so there might not be a file loaded when resizing
                 if (this.state.isReady) {
                     // restore previous position
-                    this._seekTo(this.props.pos);
+                    this.seekTo(this.props.pos);
                 }
 
                 // restore playback
                 if (this.props.playing) {
-                    this._wavesurfer.play();
+                    this.wavesurfer.play();
                 }
             });
         }
     }
 
+    public render() {
+        const childrenWithProps = this.props.children
+            ? React.Children.map(this.props.children, (child: any) =>
+                React.cloneElement(child, {
+                    isReady: this.state.isReady,
+                    wavesurfer: this.wavesurfer,
+                }),
+            ) : false;
+        return (
+            <div>
+                <div
+                    ref={(c) => {
+                        this.wavesurferEl = c;
+                    }}
+                />
+                {childrenWithProps}
+            </div>
+        );
+    }
+
     public componentDidMount() {
         const options = _.merge(this.props.options, {
-            container: this.wavesurferEl
+            container: this.wavesurferEl,
         });
 
         // media element loading is only supported by MediaElement backend
@@ -113,43 +132,43 @@ class Wavesurfer extends React.Component<any, any> {
             options.backend = "MediaElement";
         }
 
-        this._wavesurfer.init(options);
+        this.wavesurfer.init(options);
 
         // file was loaded, wave was drawn
-        this._wavesurfer.on("ready", () => {
+        this.wavesurfer.on("ready", () => {
             this.setState({
                 isReady: true,
-                pos: this.props.pos
+                pos: this.props.pos,
             });
 
             // set initial position
             if (this.props.pos) {
-                this._seekTo(this.props.pos);
+                this.seekTo(this.props.pos);
             }
 
             // set initial volume
             if (this.props.volume) {
-                this._wavesurfer.setVolume(this.props.volume);
+                this.wavesurfer.setVolume(this.props.volume);
             }
 
             // set initial playing state
             if (this.props.playing) {
-                this._wavesurfer.play();
+                this.wavesurfer.play();
             }
 
             // set initial zoom
             if (this.props.zoom) {
-                this._wavesurfer.zoom(this.props.zoom);
+                this.wavesurfer.zoom(this.props.zoom);
             }
         });
 
-        this._wavesurfer.on("audioprocess", (pos: any) => {
+        this.wavesurfer.on("audioprocess", (pos: any) => {
             this.setState({
-                pos
+                pos,
             });
             this.props.onPosChange({
-                wavesurfer: this._wavesurfer,
-                originalArgs: [pos]
+                originalArgs: [pos],
+                wavesurfer: this.wavesurfer,
             });
         });
 
@@ -157,28 +176,28 @@ class Wavesurfer extends React.Component<any, any> {
         // `seek` event and calculate the equivalent in seconds (seek event
         // receives a position float 0-1) – See the README.md for explanation why we
         // need this
-        this._wavesurfer.on("seek", (pos: any) => {
+        this.wavesurfer.on("seek", (pos: any) => {
             if (this.state.isReady) {
                 const formattedPos = this._posToSec(pos);
                 this.setState({
-                    formattedPos
+                    formattedPos,
                 });
                 this.props.onPosChange({
-                    wavesurfer: this._wavesurfer,
-                    originalArgs: [formattedPos]
+                    originalArgs: [formattedPos],
+                    wavesurfer: this.wavesurfer,
                 });
             }
         });
 
         // hook up events to callback handlers passed in as props
-        EVENTS.forEach(e => {
+        EVENTS.forEach((e) => {
             const propCallback = this.props[`on${capitaliseFirstLetter(e)}`];
-            const wavesurfer = this._wavesurfer;
+            const wavesurfer = this.wavesurfer;
             if (propCallback) {
-                this._wavesurfer.on(e, (...originalArgs: any) => {
+                this.wavesurfer.on(e, (...originalArgs: any) => {
                     propCallback({
+                        originalArgs,
                         wavesurfer,
-                        originalArgs
                     });
                 });
             }
@@ -186,16 +205,16 @@ class Wavesurfer extends React.Component<any, any> {
 
         // if audioFile prop, load file
         if (this.props.audioFile) {
-            this._loadAudio(this.props.audioFile, this.props.audioPeaks);
+            this.loadAudio(this.props.audioFile, this.props.audioPeaks);
         }
 
         // if mediaElt prop, load media Element
         if (this.props.mediaElt) {
-            this._loadMediaElt(this.props.mediaElt, this.props.audioPeaks);
+            this.loadMediaElt(this.props.mediaElt, this.props.audioPeaks);
         }
 
         if (this.props.responsive) {
-            window.addEventListener("resize", this._handleResize, false);
+            window.addEventListener("resize", this.handleResize, false);
         }
     }
 
@@ -207,27 +226,27 @@ class Wavesurfer extends React.Component<any, any> {
         // update audioFile
         if (this.props.audioFile !== nextProps.audioFile) {
             this.setState({
-                isReady: false
+                isReady: false,
             });
-            this._loadAudio(nextProps.audioFile, nextProps.audioPeaks);
+            this.loadAudio(nextProps.audioFile, nextProps.audioPeaks);
             newSource = true;
         }
 
         // update mediaElt
         if (this.props.mediaElt !== nextProps.mediaElt) {
             this.setState({
-                isReady: false
+                isReady: false,
             });
-            this._loadMediaElt(nextProps.mediaElt, nextProps.audioPeaks);
+            this.loadMediaElt(nextProps.mediaElt, nextProps.audioPeaks);
             newSource = true;
         }
 
         // update peaks
         if (this.props.audioPeaks !== nextProps.audioPeaks) {
             if (nextProps.mediaElt) {
-                this._loadMediaElt(nextProps.mediaElt, nextProps.audioPeaks);
+                this.loadMediaElt(nextProps.mediaElt, nextProps.audioPeaks);
             } else {
-                this._loadAudio(nextProps.audioFile, nextProps.audioPeaks);
+                this.loadAudio(nextProps.audioFile, nextProps.audioPeaks);
             }
         }
 
@@ -239,12 +258,12 @@ class Wavesurfer extends React.Component<any, any> {
             nextProps.pos !== this.state.pos
         ) {
             if (newSource) {
-                seekToInNewFile = this._wavesurfer.on("ready", () => {
-                    this._seekTo(nextProps.pos);
+                seekToInNewFile = this.wavesurfer.on("ready", () => {
+                    this.seekTo(nextProps.pos);
                     seekToInNewFile.un();
                 });
             } else {
-                this._seekTo(nextProps.pos);
+                this.seekTo(nextProps.pos);
             }
         }
 
@@ -252,28 +271,28 @@ class Wavesurfer extends React.Component<any, any> {
         if (
             !newSource &&
             (this.props.playing !== nextProps.playing ||
-                this._wavesurfer.isPlaying() !== nextProps.playing)
+                this.wavesurfer.isPlaying() !== nextProps.playing)
         ) {
             if (nextProps.playing) {
-                this._wavesurfer.play();
+                this.wavesurfer.play();
             } else {
-                this._wavesurfer.pause();
+                this.wavesurfer.pause();
             }
         }
 
         // update volume
         if (this.props.volume !== nextProps.volume) {
-            this._wavesurfer.setVolume(nextProps.volume);
+            this.wavesurfer.setVolume(nextProps.volume);
         }
 
         // update volume
         if (this.props.zoom !== nextProps.zoom) {
-            this._wavesurfer.zoom(nextProps.zoom);
+            this.wavesurfer.zoom(nextProps.zoom);
         }
 
         // update audioRate
         if (this.props.options.audioRate !== nextProps.options.audioRate) {
-            this._wavesurfer.setPlaybackRate(nextProps.options.audioRate);
+            this.wavesurfer.setPlaybackRate(nextProps.options.audioRate);
         }
 
         // turn responsive on
@@ -281,7 +300,7 @@ class Wavesurfer extends React.Component<any, any> {
             nextProps.responsive &&
             this.props.responsive !== nextProps.responsive
         ) {
-            window.addEventListener("resize", this._handleResize, false);
+            window.addEventListener("resize", this.handleResize, false);
         }
 
         // turn responsive off
@@ -289,100 +308,83 @@ class Wavesurfer extends React.Component<any, any> {
             !nextProps.responsive &&
             this.props.responsive !== nextProps.responsive
         ) {
-            window.removeEventListener("resize", this._handleResize);
+            window.removeEventListener("resize", this.handleResize);
         }
     }
 
     public componentWillUnmount() {
         // remove listeners
-        EVENTS.forEach(e => {
-            this._wavesurfer.un(e);
+        EVENTS.forEach((e) => {
+            this.wavesurfer.un(e);
         });
 
         // destroy wavesurfer instance
-        this._wavesurfer.destroy();
+        this.wavesurfer.destroy();
 
         if (this.props.responsive) {
-            window.removeEventListener("resize", this._handleResize);
+            window.removeEventListener("resize", this.handleResize);
         }
     }
 
     // receives seconds and transforms this to the position as a float 0-1
     protected _secToPos(sec: number) {
-        return 1 / this._wavesurfer.getDuration() * sec;
+        return 1 / this.wavesurfer.getDuration() * sec;
     }
 
     // receives position as a float 0-1 and transforms this to seconds
     protected _posToSec(pos: number) {
-        return pos * this._wavesurfer.getDuration();
+        return pos * this.wavesurfer.getDuration();
     }
 
     // pos is in seconds, the 0-1 proportional position we calculate here …
-    protected _seekTo(sec: number) {
+    protected seekTo(sec: number) {
         const pos = this._secToPos(sec);
         if (this.props.options.autoCenter) {
-            this._wavesurfer.seekAndCenter(pos);
+            this.wavesurfer.seekAndCenter(pos);
         } else {
-            this._wavesurfer.seekTo(pos);
+            this.wavesurfer.seekTo(pos);
         }
     }
 
     // load a media element selector or HTML element
     // if selector, get the HTML element for it
-    // and pass to _loadAudio
-    protected _loadMediaElt(selectorOrElt: any, audioPeaks: any) {
+    // and pass to loadAudio
+    protected loadMediaElt(selectorOrElt: any, audioPeaks: any) {
         if (selectorOrElt instanceof (window as any).HTMLElement) {
-            this._loadAudio(selectorOrElt, audioPeaks);
+            this.loadAudio(selectorOrElt, audioPeaks);
         } else {
             if (!window.document.querySelector(selectorOrElt)) {
                 throw new Error("Media Element not found!");
             }
 
-            this._loadAudio(window.document.querySelector(selectorOrElt), audioPeaks);
+            this.loadAudio(window.document.querySelector(selectorOrElt), audioPeaks);
         }
     }
 
     // pass audio data to wavesurfer
-    protected _loadAudio(audioFileOrElt: any, audioPeaks: any) {
+    protected loadAudio(audioFileOrElt: any, audioPeaks: any) {
         if (audioFileOrElt instanceof (window as any).HTMLElement) {
             // media element
-            this._wavesurfer.loadMediaElement(audioFileOrElt, audioPeaks);
+            this.wavesurfer.loadMediaElement(audioFileOrElt, audioPeaks);
         } else if (typeof audioFileOrElt === "string") {
             // bog-standard string is handled by load method and ajax call
-            this._wavesurfer.load(audioFileOrElt, audioPeaks);
+            this.wavesurfer.load(audioFileOrElt, audioPeaks);
         } else if (
             audioFileOrElt instanceof window.Blob ||
             audioFileOrElt instanceof (window as any).File
         ) {
             // blob or file is loaded with loadBlob method
-            this._wavesurfer.loadBlob(audioFileOrElt, audioPeaks);
+            this.wavesurfer.loadBlob(audioFileOrElt, audioPeaks);
         } else {
-            throw new Error(`Wavesurfer._loadAudio expects prop audioFile
+            throw new Error(`Wavesurfer.loadAudio expects prop audioFile
         to be either HTMLElement, string or file/blob`);
         }
     }
 
-    public render() {
-        const childrenWithProps = this.props.children
-            ? React.Children.map(this.props.children, (child: any) =>
-                React.cloneElement(child, {
-                    wavesurfer: this._wavesurfer,
-                    isReady: this.state.isReady
-                })
-            )
-            : false;
-        return (
-            <div>
-                <div
-                    ref={c => {
-                        this.wavesurferEl = c;
-                    }}
-                />
-                {childrenWithProps}
-            </div>
-        );
-    }
+    private handleResize = () => { /* noop */ };
 }
+
+/* tslint:disable:object-literal-sort-keys */
 
 Wavesurfer.propTypes = {
     playing: PropTypes.bool,
@@ -401,10 +403,9 @@ Wavesurfer.propTypes = {
 
         return null;
     },
-
     mediaElt: PropTypes.oneOfType([
         PropTypes.string,
-        PropTypes.instanceOf((window as any).HTMLElement)
+        PropTypes.instanceOf((window as any).HTMLElement),
     ]),
     audioPeaks: PropTypes.array,
     volume: PropTypes.number,
@@ -424,7 +425,6 @@ Wavesurfer.propTypes = {
 
             return null;
         },
-
         cursorColor: PropTypes.string,
         cursorWidth: positiveIntegerProptype,
         dragSelection: PropTypes.bool,
@@ -441,19 +441,21 @@ Wavesurfer.propTypes = {
         scrollParent: PropTypes.bool,
         skipLength: PropTypes.number,
         waveColor: PropTypes.oneOfType([
+            PropTypes.instanceOf((window as any).CanvasGradient),
             PropTypes.string,
-            PropTypes.instanceOf((window as any).CanvasGradient)
         ]),
-        autoCenter: PropTypes.bool
-    })
+        autoCenter: PropTypes.bool,
+    }),
 };
 
+/* tslint:enable:object-literal-sort-keys */
+
 Wavesurfer.defaultProps = {
+    onPosChange: () => { /* noop */ },
+    options: WaveSurfer.defaultParams,
     playing: false,
     pos: 0,
-    options: WaveSurfer.defaultParams,
     responsive: true,
-    onPosChange: () => { }
 };
 
 export default Wavesurfer;
