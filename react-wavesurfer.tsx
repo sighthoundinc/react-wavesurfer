@@ -33,12 +33,8 @@ function capitaliseFirstLetter(str: string): string {
  */
 function positiveIntegerProptype(props: any, propName: any, componentName: any) {
     const n = props[propName];
-    if (
-        n !== undefined &&
-        (typeof n !== "number" || n !== parseInt(n as any, 10) || n < 0)
-    ) {
-        return new Error(`Invalid ${propName} supplied to ${componentName},
-      expected a positive integer`);
+    if (n !== undefined && (typeof n !== "number" || n < 0)) {
+        return new Error(`Invalid ${propName} supplied to ${componentName}, expected a positive integer`);
     }
 
     return null;
