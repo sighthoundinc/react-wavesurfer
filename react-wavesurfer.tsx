@@ -1,4 +1,4 @@
-/* tslint:disable:file-header */
+/* eslint-disable complexity */
 
 import * as _ from "lodash";
 import * as PropTypes from "prop-types";
@@ -61,7 +61,7 @@ class Wavesurfer extends React.Component<any, any> {
     private wavesurfer: any;
     private wavesurferEl: any;
 
-    constructor(props: any) {
+    public constructor(props: any) {
         super(props);
 
         this.state = {

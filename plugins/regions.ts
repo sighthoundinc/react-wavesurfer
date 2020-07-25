@@ -42,7 +42,7 @@ class Regions extends Component<any, any> {
     public static propTypes: any;
     public static defaultProps: any;
 
-    constructor(props: any) {
+    public constructor(props: any) {
         super(props);
 
         // this is so that jscs does not force us to go functional
@@ -74,6 +74,7 @@ class Regions extends Component<any, any> {
                 const newRegion = nextProps.regions[newRegionId];
 
                 // remove from oldRegions
+                // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
                 delete oldRegions[newRegionId];
 
                 // new regions
