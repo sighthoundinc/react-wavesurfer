@@ -57,7 +57,7 @@ class Regions extends Component<any, any> {
         this.props.wavesurfer.on("ready", this.init.bind(this));
     }
 
-    public componentWillReceiveProps(nextProps: any) {
+    public UNSAFE_componentWillReceiveProps(nextProps: any) {
         // only update if the wavesurfer instance is ready and plugin too
         if (!this.props.isReady ||
             !this.props.wavesurfer.regions) {

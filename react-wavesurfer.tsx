@@ -215,7 +215,7 @@ class Wavesurfer extends React.Component<any, any> {
     }
 
     // update wavesurfer rendering manually
-    public componentWillReceiveProps(nextProps: any) {
+    public UNSAFE_componentWillReceiveProps(nextProps: any) {
         let newSource = false;
         let seekToInNewFile: any;
 
